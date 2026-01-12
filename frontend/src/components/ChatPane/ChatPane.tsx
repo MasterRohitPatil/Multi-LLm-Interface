@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ChatPane as ChatPaneType, Message, SelectedContent } from '../../types';
+import { MarkdownRenderer } from '../MarkdownRenderer/MarkdownRenderer';
 import './ChatPane.css';
 
 export interface ChatPaneProps {
@@ -25,14 +26,34 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
   compareHighlights = []
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [pane.messages]);
+    // Scroll to bottom using multiple methods for reliability
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+    
+    // Also scroll the container to bottom
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [pane.messages, pane.messages.length]);
+
+  // Also scroll on streaming updates (when message content changes)
+  useEffect(() => {
+    const lastMessage = pane.messages[pane.messages.length - 1];
+    if (lastMessage && pane.isStreaming) {
+      // During streaming, scroll to bottom
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }
+  }, [pane.messages, pane.isStreaming]);
 
   const handleMessageSelect = (messageId: string) => {
     if (!isSelectionMode) return;
@@ -106,7 +127,12 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
 
   const renderMessageContent = (message: Message) => {
     if (!isCompareMode || compareHighlights.length === 0) {
-      return <div className="message-text">{message.content}</div>;
+      // Render markdown for normal messages
+      return (
+        <div className="message-text">
+          <MarkdownRenderer content={message.content} />
+        </div>
+      );
     }
 
     // Apply compare highlights to message content
@@ -179,7 +205,7 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
       </div>
 
       {/* Messages Container */}
-      <div className="messages-container">
+      <div className="messages-container" ref={messagesContainerRef}>
         {pane.messages.length === 0 ? (
           <div className="empty-messages">
             <p>No messages yet. Start a broadcast to see responses here.</p>

@@ -98,8 +98,8 @@
 
 3. **Type the Query** (type naturally, not too fast)
    ```
-   I'm planning a destination wedding in India for 80 guests in February 2025. 
-   Our budget is $100,000 USD. We want:
+   I'm planning a destination wedding in India for 180 guests in February 2025. 
+   Our budget is INR 1,00,00,000 . We want:
    
    - A palace or heritage venue with royal ambiance
    - Good weather in February

@@ -99,11 +99,15 @@
 .messages-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(248, 250, 252, 0.05) 100%);
+  scroll-behavior: smooth;
+  /* Ensure scrolling works properly */
+  position: relative;
 }
 
 .empty-messages {
@@ -228,10 +232,27 @@
   font-size: 15px;
   line-height: 1.6;
   color: #1e293b;
-  white-space: pre-wrap;
   word-wrap: break-word;
   font-weight: 400;
   letter-spacing: 0.01em;
+  /* Remove white-space: pre-wrap to allow markdown to handle formatting */
+}
+
+/* Ensure markdown content fits well in messages */
+.message-text .markdown-content {
+  color: inherit;
+}
+
+.message-user .markdown-content {
+  color: #1e293b;
+}
+
+.message-assistant .markdown-content {
+  color: #1e293b;
+}
+
+.message-system .markdown-content {
+  color: #78350f;
 }
 
 .message-metadata {
