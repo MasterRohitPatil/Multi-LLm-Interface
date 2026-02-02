@@ -71,6 +71,10 @@ class LiteLLMAdapter(LLMAdapter):
                 message_count=len(messages)
             )
             
+            # Clean model ID
+            if model.startswith("litellm:"):
+                model = model.split(":", 1)[1]
+            
             # Convert messages to LiteLLM format
             formatted_messages = [
                 {"role": msg.role, "content": msg.content}

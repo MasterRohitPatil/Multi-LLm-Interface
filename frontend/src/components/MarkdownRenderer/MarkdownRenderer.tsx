@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import './MarkdownRenderer.css';
 
 interface MarkdownRendererProps {
@@ -12,6 +14,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     <div className="markdown-content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={{
           // Custom renderers for better styling
           h1: ({ children }) => <h1 className="md-h1">{children}</h1>,

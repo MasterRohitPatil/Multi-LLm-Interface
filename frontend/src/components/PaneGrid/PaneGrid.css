@@ -92,9 +92,12 @@
 }
 
 @keyframes pulse-compare {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
+
   50% {
     box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5);
   }
@@ -285,29 +288,29 @@
     min-width: 300px !important;
     min-height: 400px !important;
   }
-  
+
   .compare-mode-indicator {
     top: 8px;
     right: 8px;
   }
-  
+
   .compare-status {
     padding: 6px 12px;
     font-size: 12px;
   }
-  
+
   .empty-state {
     padding: 20px;
   }
-  
+
   .empty-icon {
     font-size: 48px;
   }
-  
+
   .empty-state h3 {
     font-size: 20px;
   }
-  
+
   .empty-state p {
     font-size: 14px;
   }
@@ -323,6 +326,7 @@
     opacity: 0;
     transform: scale(0.9) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -359,6 +363,7 @@
 :global(.wb-window.chat-pane-window .wb-body *::-webkit-scrollbar-thumb:hover) {
   background: #94a3b8;
 }
+
 /* C
 hat Pane Content Styles */
 :global(.chat-pane-content) {
@@ -480,7 +485,6 @@ hat Pane Content Styles */
 :global(.chat-pane-content .message-content) {
   font-size: 14px;
   line-height: 1.4;
-  white-space: pre-wrap;
   word-wrap: break-word;
 }
 
@@ -571,7 +575,9 @@ hat Pane Content Styles */
 
 :global(.chat-pane-content .messages-container::-webkit-scrollbar-thumb:hover) {
   background: rgba(0, 0, 0, 0.3);
-}/* 
+}
+
+/* 
 Chat Input Styles for WinBox Windows */
 :global(.wb-window .chat-input-section) {
   padding: 12px;
@@ -679,7 +685,6 @@ Chat Input Styles for WinBox Windows */
   font-size: 14px;
   line-height: 1.5;
   color: #1f2937;
-  white-space: pre-wrap;
 }
 
 :global(.wb-window .messages-container) {
@@ -725,7 +730,9 @@ Chat Input Styles for WinBox Windows */
 :global(.wb-window .metric-value) {
   font-weight: 600;
   color: #1f2937;
-}/* Co
+}
+
+/* Co
 mprehensive ChatPane styling overrides for WinBox */
 :global(.wb-window.chat-pane-window .wb-body .pane-header) {
   display: flex !important;
@@ -832,7 +839,6 @@ mprehensive ChatPane styling overrides for WinBox */
   font-size: 15px !important;
   line-height: 1.6 !important;
   color: #1e293b !important;
-  white-space: pre-wrap !important;
   word-wrap: break-word !important;
 }
 
@@ -956,10 +962,14 @@ mprehensive ChatPane styling overrides for WinBox */
 }
 
 @keyframes streaming-pulse {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0.8);
     opacity: 0.5;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -972,6 +982,7 @@ mprehensive ChatPane styling overrides for WinBox */
   font-style: italic !important;
   font-weight: 500 !important;
 }
+
 /* Me
 ssage Selection Styles */
 :global(.wb-window.chat-pane-window .wb-body .message.selectable) {
@@ -1077,15 +1088,88 @@ ssage Selection Styles */
     flex-direction: column !important;
     gap: 8px !important;
   }
-  
+
   :global(.wb-window.chat-pane-window .wb-body .selection-actions),
   :global(.wb-window.chat-pane-window .wb-body .transfer-actions) {
     width: 100% !important;
     justify-content: center !important;
   }
-  
+
   :global(.wb-window.chat-pane-window .wb-body .action-btn) {
     flex: 1 !important;
     text-align: center !important;
   }
+}
+
+/* Markdown Code Styling - for marked library output */
+/* Inline code (backticks) */
+:global(.wb-window.chat-pane-window .wb-body .message-text code) {
+  background-color: rgba(175, 184, 193, 0.2) !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 4px !important;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace !important;
+  font-size: 0.85em !important;
+  color: #d63384 !important;
+  font-weight: 500 !important;
+}
+
+/* Code blocks (triple backticks) */
+:global(.wb-window.chat-pane-window .wb-body .message-text pre) {
+  background-color: #f6f8fa !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  overflow-x: auto !important;
+  margin: 12px 0 !important;
+  border: 1px solid #e1e4e8 !important;
+}
+
+:global(.wb-window.chat-pane-window .wb-body .message-text pre code) {
+  background-color: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace !important;
+  font-size: 0.9em !important;
+  line-height: 1.6 !important;
+  color: #24292e !important;
+  display: block !important;
+  font-weight: 400 !important;
+}
+
+/* Lists in markdown */
+:global(.wb-window.chat-pane-window .wb-body .message-text ul),
+:global(.wb-window.chat-pane-window .wb-body .message-text ol) {
+  margin: 12px 0 !important;
+  padding-left: 2em !important;
+}
+
+:global(.wb-window.chat-pane-window .wb-body .message-text li) {
+  margin: 6px 0 !important;
+}
+
+/* Blockquotes */
+:global(.wb-window.chat-pane-window .wb-body .message-text blockquote) {
+  margin: 12px 0 !important;
+  padding: 8px 16px !important;
+  border-left: 4px solid #dfe2e5 !important;
+  background-color: rgba(246, 248, 250, 0.6) !important;
+  color: #6a737d !important;
+}
+
+/* Headings in markdown */
+:global(.wb-window.chat-pane-window .wb-body .message-text h1),
+:global(.wb-window.chat-pane-window .wb-body .message-text h2),
+:global(.wb-window.chat-pane-window .wb-body .message-text h3),
+:global(.wb-window.chat-pane-window .wb-body .message-text h4),
+:global(.wb-window.chat-pane-window .wb-body .message-text h5),
+:global(.wb-window.chat-pane-window .wb-body .message-text h6) {
+  margin-top: 20px !important;
+  margin-bottom: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+}
+
+/* Paragraphs in markdown */
+:global(.wb-window.chat-pane-window .wb-body .message-text p) {
+  margin: 8px 0 !important;
+  line-height: 1.6 !important;
 }

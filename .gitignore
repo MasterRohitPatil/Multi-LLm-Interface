@@ -81,3 +81,12 @@ dmypy.json
 *.temp
 .tmp/
 .temp/
+
+# Test results and debug scripts
+adapter_test_results_*.csv
+adapter_test_results_*.txt
+check_keys.py
+debug_request.py
+diag_keys.py
+test_*_focused.py
+frontend/test-*.js

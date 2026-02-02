@@ -63,11 +63,11 @@ export const Workspace: React.FC = () => {
       if (availableModels.length === 0) {
         try {
           console.log('Fetching models from backend...');
-          const response = await fetch('http://localhost:5000/models');
+          const models = await apiService.getAvailableModels();
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Backend response:', data);
+          if (models) {
+            console.log('Backend response:', models);
+            const data = { models };
 
             if (data.models && Array.isArray(data.models)) {
               // Transform backend model format to frontend format
@@ -100,39 +100,15 @@ export const Workspace: React.FC = () => {
     const setFallbackModels = () => {
       const fallbackModels = [
         {
-          id: 'google:gemini-2.5-pro',
-          name: 'Gemini 2.5 Pro',
+          id: 'gemini-3-flash-preview',
+          name: 'Gemini 3 Flash (Preview)',
           provider: 'google',
-          maxTokens: 200000,
-          costPer1kTokens: 1.25,
+          maxTokens: 1048576,
+          costPer1kTokens: 0.0007,
           supportsStreaming: true
         },
         {
-          id: 'google:gemini-flash-latest',
-          name: 'Gemini Flash Latest',
-          provider: 'google',
-          maxTokens: 1000000,
-          costPer1kTokens: 0.30,
-          supportsStreaming: true
-        },
-        {
-          id: 'google:gemini-2.0-flash',
-          name: 'Gemini 2.0 Flash',
-          provider: 'google',
-          maxTokens: 100000,
-          costPer1kTokens: 0.10,
-          supportsStreaming: true
-        },
-        {
-          id: 'google:gemini-2.0-flash-lite',
-          name: 'Gemini 2.0 Flash Lite',
-          provider: 'google',
-          maxTokens: 100000,
-          costPer1kTokens: 0.075,
-          supportsStreaming: true
-        },
-        {
-          id: 'groq:llama-3.1-8b-instant',
+          id: 'llama-3.1-8b-instant',
           name: 'Llama 3.1 8B Instant',
           provider: 'groq',
           maxTokens: 8192,
@@ -140,19 +116,27 @@ export const Workspace: React.FC = () => {
           supportsStreaming: true
         },
         {
-          id: 'groq:llama-3.3-70b-versatile',
-          name: 'Llama 3.3 70B Versatile',
+          id: 'qwen/qwen3-32b',
+          name: 'Qwen 3 32B',
           provider: 'groq',
           maxTokens: 32768,
-          costPer1kTokens: 0.0005,
+          costPer1kTokens: 0.0008,
           supportsStreaming: true
         },
         {
-          id: 'groq:compound',
-          name: 'Compound',
+          id: 'openai/gpt-oss-120b',
+          name: 'GPT OSS 120B',
           provider: 'groq',
-          maxTokens: 4096,
-          costPer1kTokens: 0.0002,
+          maxTokens: 8192,
+          costPer1kTokens: 0.0012,
+          supportsStreaming: true
+        },
+        {
+          id: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+          name: 'Llama 4 Maverick 17B',
+          provider: 'groq',
+          maxTokens: 8192,
+          costPer1kTokens: 0.0008,
           supportsStreaming: true
         }
       ];
@@ -234,25 +218,11 @@ export const Workspace: React.FC = () => {
     updatePaneMessages(paneId, userMessage);
 
     try {
-      // Send message to existing pane using new chat endpoint
-      const response = await fetch(`http://localhost:5000/chat/${paneId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: currentSession.id,
-          message: message
-        })
-      });
-
-      if (response.ok) {
-        console.log('Message sent to', pane.modelInfo.name);
-      } else {
-        console.error('Failed to send message:', response.statusText);
-      }
+      // Use apiService to send chat message
+      await apiService.sendChatMessage(paneId, currentSession.id, message);
+      console.log('✅ Message sent to', pane.modelInfo.name);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
     }
   };
 
@@ -264,25 +234,19 @@ export const Workspace: React.FC = () => {
 
     try {
       // Call the backend broadcast endpoint
-      const response = await fetch('http://localhost:5000/broadcast', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: currentSession.id,
-          prompt: prompt,
-          models: models.map(model => ({
-            provider_id: model.provider,
-            model_id: model.id,
-            temperature: 0.7,
-            max_tokens: 1000
-          }))
-        })
+      // Call the backend broadcast endpoint
+      const result = await apiService.createBroadcast({
+        session_id: currentSession.id,
+        prompt: prompt,
+        models: models.map(model => ({
+          provider_id: model.provider,
+          model_id: model.id,
+          temperature: 0.7,
+          max_tokens: 1000
+        }))
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      if (result) {
         console.log('Broadcast started:', result);
 
         // Create panes for each model if they don't exist and add user message
@@ -311,10 +275,12 @@ export const Workspace: React.FC = () => {
         });
 
       } else {
-        console.error('Broadcast failed:', response.statusText);
+        console.error('Broadcast failed: No result returned');
+        alert('Broadcast Failed: No result returned from backend');
       }
     } catch (error) {
       console.error('Error broadcasting:', error);
+      alert(`Error broadcasting: ${error}`);
     } finally {
       setIsStreaming(false);
     }
@@ -352,15 +318,15 @@ export const Workspace: React.FC = () => {
     summaryInstructions?: string;
   }) => {
     if (!sendToData) return;
-    
+
     try {
-      console.log('Sending content to pane:', { 
-        sourceId: sendToData.sourcePane, 
-        targetId: targetPaneId, 
+      console.log('Sending content to pane:', {
+        sourceId: sendToData.sourcePane,
+        targetId: targetPaneId,
         content,
         options
       });
-      
+
       // Call the API to transfer content with full context
       const result = await apiService.sendToPane({
         sourceId: sendToData.sourcePane,
@@ -373,12 +339,12 @@ export const Workspace: React.FC = () => {
         summaryInstructions: options.summaryInstructions,
         selectedMessageIds: sendToData.selectedContent.messageIds // Pass original message IDs
       });
-      
+
       console.log('Transfer result:', result);
-      
+
       if (result.success) {
         console.log(`✅ Successfully transferred ${result.transferred_count} messages to pane ${targetPaneId} (mode: ${options.transferMode})`);
-        
+
         // Refresh the session state from backend to show transferred messages
         if (currentSession?.id) {
           await refreshSessionFromBackend(currentSession.id);
@@ -387,7 +353,7 @@ export const Workspace: React.FC = () => {
       } else {
         console.error('❌ Transfer failed:', result);
       }
-      
+
       setSendToMenuVisible(false);
       setSendToData(null);
     } catch (error) {
@@ -436,22 +402,7 @@ export const Workspace: React.FC = () => {
         }
 
         try {
-          const response = await fetch(`${apiService['baseUrl']}/chat/${paneId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              session_id: currentSession.id,
-              message: prompt
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          const result = await response.json();
+          const result = await apiService.sendChatMessage(paneId, currentSession.id, prompt);
           console.log(`✅ Message sent to pane ${paneId}:`, result);
           return result;
         } catch (error) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
+import { marked } from 'marked';
 import './WindowManager.css';
 
 // Import WinBox CSS
@@ -7,7 +8,7 @@ import 'winbox/dist/css/winbox.min.css';
 
 // WinBox constructor type
 interface WinBoxConstructor {
-  new (options: any): any;
+  new(options: any): any;
 }
 
 // Dynamic import for WinBox to handle ES module issues
@@ -21,13 +22,13 @@ const loadWinBox = async (): Promise<WinBoxConstructor | null> => {
       const winboxModule = await import('winbox');
       // Handle different export patterns
       WinBoxClass = (winboxModule as any).default || winboxModule;
-      
+
       // Verify it's a constructor
       if (typeof WinBoxClass !== 'function') {
         console.error('WinBox is not a constructor function');
         return null;
       }
-      
+
       console.log('WinBox loaded successfully from npm package');
     } catch (error) {
       console.error('Failed to load WinBox:', error);
@@ -38,12 +39,12 @@ const loadWinBox = async (): Promise<WinBoxConstructor | null> => {
 };
 
 export const WindowManager: React.FC = () => {
-  const { 
-    activePanes, 
-    registerWindow, 
+  const {
+    activePanes,
+    registerWindow,
     unregisterWindow
   } = useAppStore();
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const windowsRef = useRef<Map<string, any>>(new Map());
 
@@ -114,20 +115,28 @@ export const WindowManager: React.FC = () => {
   };
 
   const createPaneContent = (pane: any): string => {
-    const messagesHtml = pane.messages.map((message: any) => `
-      <div class="message message-${message.role}">
-        <div class="message-header">
-          <span class="message-role">${message.role}</span>
-          <span class="message-time">${new Date(message.timestamp).toLocaleTimeString()}</span>
-        </div>
-        <div class="message-content">${message.content}</div>
-        ${message.provenance ? `
-          <div class="message-provenance">
-            From: ${message.provenance.sourceModel} (${message.provenance.sourcePaneId})
+    const messagesHtml = pane.messages.map((message: any) => {
+      // Parse markdown content to HTML
+      const parsedContent = marked.parse(message.content, {
+        breaks: true,
+        gfm: true
+      }) as string;
+
+      return `
+        <div class="message message-${message.role}">
+          <div class="message-header">
+            <span class="message-role">${message.role}</span>
+            <span class="message-time">${new Date(message.timestamp).toLocaleTimeString()}</span>
           </div>
-        ` : ''}
-      </div>
-    `).join('');
+          <div class="message-content">${parsedContent}</div>
+          ${message.provenance ? `
+            <div class="message-provenance">
+              From: ${message.provenance.sourceModel} (${message.provenance.sourcePaneId})
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
 
     const streamingIndicator = pane.isStreaming ? `
       <div class="streaming-indicator">
@@ -213,12 +222,12 @@ export const WindowManager: React.FC = () => {
   }, []);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="window-manager-container"
-      style={{ 
-        width: '100%', 
-        height: '100%', 
+      style={{
+        width: '100%',
+        height: '100%',
         position: 'relative',
         overflow: 'hidden'
       }}

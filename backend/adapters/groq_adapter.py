@@ -63,7 +63,11 @@ class GroqAdapter(LLMAdapter):
                 )
             )
             return
-        
+
+        print(f"🚀 GROQ STREAM START: model={model}, pane_id={pane_id}")
+        for m in messages:
+            print(f"  - [{m.role}] {m.content[:50]}")
+
         try:
             # Emit status event
             yield StreamEvent(
@@ -72,11 +76,17 @@ class GroqAdapter(LLMAdapter):
                 data=StatusData(status="connecting", message=f"Connecting to Groq {model}")
             )
             
+            # Clean model ID
+            if model.startswith("groq:"):
+                model = model.split(":", 1)[1]
+            
             # Convert messages to OpenAI format (Groq uses OpenAI-compatible API)
-            formatted_messages = [
-                {"role": msg.role, "content": msg.content}
-                for msg in messages
-            ]
+            formatted_messages = []
+            for msg in messages:
+                content = msg.content
+                if content is None:
+                    content = ""
+                formatted_messages.append({"role": msg.role, "content": content})
             
             # Prepare request payload
             payload = {
@@ -113,6 +123,8 @@ class GroqAdapter(LLMAdapter):
                     print(f"🔴 Response Headers: {dict(response.headers)}")
                     print(f"🔴 Error Content: {error_content[:1000]}")
                     
+                    print(f"🔵 Groq Headers: {dict(response.headers)}")
+                    
                     error_handler._log_structured(
                         "error",
                         f"Groq API error: {response.status_code}",
@@ -146,7 +158,9 @@ class GroqAdapter(LLMAdapter):
                     )
                     return
                 
+                print(f"🔵 Groq Headers: {dict(response.headers)}")
                 async for line in response.aiter_lines():
+                    print(f"📦 Groq Line: {line[:100]}")  # DEBUG PRINT
                     if not line.strip():
                         continue
                     

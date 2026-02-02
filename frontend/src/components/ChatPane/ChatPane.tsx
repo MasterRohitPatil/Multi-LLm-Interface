@@ -27,22 +27,31 @@ export const ChatPane: React.FC<ChatPaneProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef<number>(0);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom ONLY when new messages are added to THIS pane
   useEffect(() => {
-    // Scroll to bottom using multiple methods for reliability
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const currentMessageCount = pane.messages.length;
+
+    // Only scroll if message count actually increased (new message added)
+    if (currentMessageCount > prevMessageCountRef.current) {
+      // Scroll to bottom using multiple methods for reliability
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+
+      // Also scroll the container to bottom
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
     }
-    
-    // Also scroll the container to bottom
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [pane.messages, pane.messages.length]);
+
+    // Update the previous count
+    prevMessageCountRef.current = currentMessageCount;
+  }, [pane.messages.length]);
 
   // Also scroll on streaming updates (when message content changes)
   useEffect(() => {

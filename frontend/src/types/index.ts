@@ -33,10 +33,10 @@ export interface ModelInfo {
 }
 
 export interface ModelSelection {
-  providerId: string;
-  modelId: string;
+  provider_id: string;
+  model_id: string;
   temperature?: number;
-  maxTokens?: number;
+  max_tokens?: number;
 }
 
 export interface ChatPane {
@@ -109,12 +109,12 @@ export interface StatusData {
 export interface BroadcastRequest {
   prompt: string;
   models: ModelSelection[];
-  sessionId: string;
+  session_id: string;
 }
 
 export interface BroadcastResponse {
-  sessionId: string;
-  paneIds: string[];
+  session_id: string;
+  pane_ids: string[];
   status: string;
   user_message_ids?: { [paneId: string]: string }; // pane_id -> user_message_id mapping
 }

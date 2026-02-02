@@ -245,11 +245,14 @@ class BroadcastOrchestrator:
             
             # Use the streaming method from our custom adapters
             logger.info(f"Starting adapter.stream for {model_id} -> pane {pane_id}")
+            print(f"👉 CALLING ADAPTER.STREAM for {model_id}") # DEBUG TRACE
             
             try:
+                event_count = 0
                 async for event in adapter.stream(
                     messages, model_selection.model_id, pane_id, **stream_params
                 ):
+                    event_count += 1
                     print(f"🎯 Generated event: {event.type} for pane {pane_id} (model: {model_id})")
                     
                     # Update session state

@@ -64,6 +64,10 @@ class GoogleDataStudioAdapter(LLMAdapter):
             )
             return
         
+        print(f"🚀 GOOGLE STREAM START: model={model}, pane_id={pane_id}")
+        for m in messages:
+            print(f"  - [{m.role}] {m.content[:50]}")
+        
         try:
             # Emit status event
             yield StreamEvent(
@@ -71,6 +75,10 @@ class GoogleDataStudioAdapter(LLMAdapter):
                 pane_id=pane_id,
                 data=StatusData(status="connecting", message=f"Connecting to Google {model}")
             )
+            
+            # Clean model ID
+            if model.startswith("google:"):
+                model = model.split(":", 1)[1]
             
             # Convert messages to Google format
             formatted_messages = self._format_messages(messages)
@@ -112,6 +120,9 @@ class GoogleDataStudioAdapter(LLMAdapter):
                     print(f"🔴 Response Headers: {dict(response.headers)}")
                     print(f"🔴 Error Content: {error_content[:1000]}")
                     
+                
+                    print(f"🔵 Google Headers: {dict(response.headers)}")
+                    
                     error_handler._log_structured(
                         "error",
                         f"Google API error: {response.status_code}",
@@ -148,6 +159,8 @@ class GoogleDataStudioAdapter(LLMAdapter):
                 # Read the entire response and parse as JSON
                 response_text = await response.aread()
                 response_str = response_text.decode('utf-8')
+                print(f"📦 Google Raw Response: {response_str[:500]}...") # DEBUG PRINT
+
                 print(f"📥 Complete response from Google: {response_str[:200]}...")
                 
                 try:
@@ -283,24 +296,8 @@ class GoogleDataStudioAdapter(LLMAdapter):
         """Return hardcoded working Google models - 3 core models"""
         return [
             ModelInfo(
-                id="gemini-2.5-pro",
-                name="Gemini 2.5 Pro",
-                provider="google",
-                max_tokens=1048576,
-                cost_per_1k_tokens=0.0035,
-                supports_streaming=True
-            ),
-            ModelInfo(
-                id="gemini-2.5-flash",
-                name="Gemini 2.5 Flash",
-                provider="google",
-                max_tokens=1048576,
-                cost_per_1k_tokens=0.0007,
-                supports_streaming=True
-            ),
-            ModelInfo(
-                id="gemini-2.0-flash",
-                name="Gemini 2.0 Flash",
+                id="gemini-3-flash-preview",
+                name="Gemini 3 Flash (Preview)",
                 provider="google",
                 max_tokens=1048576,
                 cost_per_1k_tokens=0.0007,

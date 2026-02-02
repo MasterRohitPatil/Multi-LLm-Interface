@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
+import { marked } from 'marked';
 import './PaneGrid.css';
 import '../ChatPane/ChatPane.css';
 
@@ -8,7 +9,7 @@ import 'winbox/dist/css/winbox.min.css';
 
 // WinBox constructor type
 interface WinBoxConstructor {
-  new (options: any): any;
+  new(options: any): any;
 }
 
 // Use a simple approach - load WinBox from the installed npm package
@@ -23,10 +24,10 @@ const initWinBox = async (): Promise<WinBoxConstructor | null> => {
   try {
     // Use dynamic import which should work better with Vite
     const winboxModule = await import('winbox');
-    
+
     // Log what we got to debug
     console.log('WinBox module imported:', winboxModule);
-    
+
     // Try to find the constructor in different places
     const possibleConstructors = [
       winboxModule.default,
@@ -34,7 +35,7 @@ const initWinBox = async (): Promise<WinBoxConstructor | null> => {
       (winboxModule as any).WinBox,
       (window as any).WinBox
     ];
-    
+
     for (const constructor of possibleConstructors) {
       if (constructor && typeof constructor === 'function') {
         console.log('Found WinBox constructor:', constructor);
@@ -42,7 +43,7 @@ const initWinBox = async (): Promise<WinBoxConstructor | null> => {
         return WinBoxConstructor;
       }
     }
-    
+
     console.error('No valid WinBox constructor found in:', possibleConstructors);
     return null;
   } catch (error) {
@@ -84,13 +85,13 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
   onMinimizeAll,
   onCloseAll
 }) => {
-  const { 
-    activePanes, 
-    registerWindow, 
+  const {
+    activePanes,
+    registerWindow,
     unregisterWindow,
     removePane
   } = useAppStore();
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const windowsRef = useRef<Map<string, any>>(new Map());
   const selectionStateRef = useRef<{ [paneId: string]: { isSelectionMode: boolean; selectedMessages: Set<string> } }>({});
@@ -165,7 +166,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
           const targetHeight = Math.floor(containerRect.height * 0.8); // 80% of height
           const targetX = 50;
           const targetY = 50;
-          
+
           // Resize and position the window
           winbox.resize(targetWidth, targetHeight);
           winbox.move(targetX, targetY);
@@ -184,29 +185,37 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
   const renderPaneContent = (container: HTMLElement, pane: any) => {
     // Debug logging
     console.log('Rendering pane content for:', pane.id, 'Messages:', pane.messages.length, pane.messages);
-    
+
     // Ensure the container has proper styling
     container.style.background = '#ffffff';
     container.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    
-    // Create a properly styled HTML representation that matches the ChatPane component
-    const messagesHtml = pane.messages.map((message: any) => `
-      <div class="message message-${message.role} selectable" data-message-id="${message.id}" onclick="window.toggleMessageSelection('${pane.id}', '${message.id}')">
-        <div class="message-header">
-          <div class="message-meta">
-            <span class="message-role">${message.role}</span>
-            <span class="message-time">${new Date(message.timestamp).toLocaleTimeString()}</span>
 
+    // Create a properly styled HTML representation that matches the ChatPane component
+    const messagesHtml = pane.messages.map((message: any) => {
+      // Parse markdown content to HTML
+      const parsedContent = marked.parse(message.content, {
+        breaks: true,
+        gfm: true
+      }) as string;
+
+      return `
+        <div class="message message-${message.role} selectable" data-message-id="${message.id}" onclick="window.toggleMessageSelection('${pane.id}', '${message.id}')">
+          <div class="message-header">
+            <div class="message-meta">
+              <span class="message-role">${message.role}</span>
+              <span class="message-time">${new Date(message.timestamp).toLocaleTimeString()}</span>
+
+            </div>
+            <div class="selection-checkbox" id="checkbox-${pane.id}-${message.id}" style="display: none;">
+              <input type="checkbox" onchange="window.handleMessageCheckbox('${pane.id}', '${message.id}', this.checked)" onclick="event.stopPropagation()">
+            </div>
           </div>
-          <div class="selection-checkbox" id="checkbox-${pane.id}-${message.id}" style="display: none;">
-            <input type="checkbox" onchange="window.handleMessageCheckbox('${pane.id}', '${message.id}', this.checked)" onclick="event.stopPropagation()">
+          <div class="message-content">
+            <div class="message-text">${parsedContent}</div>
           </div>
         </div>
-        <div class="message-content">
-          <div class="message-text">${message.content.replace(/\n/g, '<br>')}</div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     const streamingIndicator = pane.isStreaming ? `
       <div class="streaming-indicator">
@@ -287,7 +296,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         </div>
       </div>
     `;
-    
+
     // Apply additional styling to ensure proper appearance
     const chatPane = container.querySelector('.chat-pane') as HTMLElement;
     if (chatPane) {
@@ -304,7 +313,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
       `;
     }
-    
+
     // Style the header
     const header = container.querySelector('.pane-header') as HTMLElement;
     if (header) {
@@ -319,14 +328,14 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         backdrop-filter: blur(10px) !important;
       `;
     }
-    
+
     // Style messages
     const messages = container.querySelectorAll('.message');
     messages.forEach((message) => {
       const messageEl = message as HTMLElement;
       const isUser = message.classList.contains('message-user');
       const isAssistant = message.classList.contains('message-assistant');
-      
+
       messageEl.style.cssText = `
         display: flex !important;
         flex-direction: column !important;
@@ -351,7 +360,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         ` : ''}
       `;
     });
-    
+
     // Style message text specifically
     const messageTexts = container.querySelectorAll('.message-text');
     messageTexts.forEach(text => {
@@ -360,12 +369,11 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         font-size: 15px !important;
         line-height: 1.6 !important;
         color: #0f172a !important;
-        white-space: pre-wrap !important;
         word-wrap: break-word !important;
         font-weight: 400 !important;
       `;
     });
-    
+
     // Style the messages container
     const messagesContainer = container.querySelector('.messages-container') as HTMLElement;
     if (messagesContainer) {
@@ -379,7 +387,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(248, 250, 252, 0.05) 100%) !important;
       `;
     }
-    
+
     // Style input section
     const inputSection = container.querySelector('.chat-input-section') as HTMLElement;
     if (inputSection) {
@@ -390,7 +398,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         backdrop-filter: blur(10px) !important;
       `;
     }
-    
+
     // Style input container
     const inputContainer = container.querySelector('.chat-input-container') as HTMLElement;
     if (inputContainer) {
@@ -400,7 +408,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         align-items: flex-end !important;
       `;
     }
-    
+
     // Style input
     const input = container.querySelector('.chat-input') as HTMLElement;
     if (input) {
@@ -418,7 +426,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         resize: vertical !important;
       `;
     }
-    
+
     // Style send button
     const sendBtn = container.querySelector('.send-btn') as HTMLElement;
     if (sendBtn) {
@@ -437,7 +445,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         justify-content: center !important;
       `;
     }
-    
+
     // Style action buttons
     const actionBtns = container.querySelectorAll('.action-btn');
     actionBtns.forEach(btn => {
@@ -454,6 +462,115 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         white-space: nowrap !important;
         backdrop-filter: blur(10px) !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+      `;
+    });
+
+
+    // Style code blocks (triple backticks) and add copy button
+    const preElements = container.querySelectorAll('.message-text pre');
+    preElements.forEach(pre => {
+      const preEl = pre as HTMLElement;
+
+      // Make pre element position relative for absolute positioning of button
+      preEl.style.cssText = `
+        background-color: #f6f8fa !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+        padding-top: 40px !important;
+        overflow-x: auto !important;
+        margin: 12px 0 !important;
+        border: 1px solid #e1e4e8 !important;
+        font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace !important;
+        position: relative !important;
+      `;
+
+      // Create copy button
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'code-copy-btn';
+      copyBtn.innerHTML = '📋';
+      copyBtn.title = 'Copy code';
+      copyBtn.style.cssText = `
+        position: absolute !important;
+        top: 8px !important;
+        right: 8px !important;
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid #d0d7de !important;
+        border-radius: 6px !important;
+        padding: 6px 10px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
+        z-index: 10 !important;
+      `;
+
+      // Add hover effect
+      copyBtn.onmouseenter = () => {
+        copyBtn.style.backgroundColor = 'rgba(255, 255, 255, 1) !important';
+        copyBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1) !important';
+      };
+      copyBtn.onmouseleave = () => {
+        copyBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.9) !important';
+        copyBtn.style.boxShadow = 'none !important';
+      };
+
+      // Add click handler
+      copyBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const codeElement = preEl.querySelector('code');
+        const codeText = codeElement?.textContent || '';
+
+        try {
+          await navigator.clipboard.writeText(codeText);
+          copyBtn.innerHTML = '✅';
+          copyBtn.title = 'Copied!';
+          setTimeout(() => {
+            copyBtn.innerHTML = '📋';
+            copyBtn.title = 'Copy code';
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy:', err);
+          copyBtn.innerHTML = '❌';
+          setTimeout(() => {
+            copyBtn.innerHTML = '📋';
+          }, 2000);
+        }
+      };
+
+      // Insert copy button at the beginning of pre element
+      preEl.insertBefore(copyBtn, preEl.firstChild);
+    });
+
+    // Style code inside pre tags
+    const preCodeElements = container.querySelectorAll('.message-text pre code');
+    preCodeElements.forEach(code => {
+      const codeEl = code as HTMLElement;
+      codeEl.style.cssText = `
+        background-color: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace !important;
+        font-size: 0.9em !important;
+        line-height: 1.6 !important;
+        color: #24292e !important;
+        display: block !important;
+        font-weight: 400 !important;
+      `;
+    });
+
+    // Style inline code (backticks) - not inside pre tags
+    const inlineCodeElements = container.querySelectorAll('.message-text code:not(pre code)');
+    inlineCodeElements.forEach(code => {
+      const codeEl = code as HTMLElement;
+      codeEl.style.cssText = `
+        background-color: rgba(175, 184, 193, 0.2) !important;
+        padding: 0.2em 0.4em !important;
+        border-radius: 4px !important;
+        font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace !important;
+        font-size: 0.85em !important;
+        color: #d63384 !important;
+        font-weight: 500 !important;
       `;
     });
   };
@@ -474,27 +591,27 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
       if (!selectionState[paneId]) {
         selectionState[paneId] = { isSelectionMode: false, selectedMessages: new Set() };
       }
-      
+
       const state = selectionState[paneId];
       state.isSelectionMode = !state.isSelectionMode;
-      
+
       // Update UI
       const selectBtn = document.getElementById(`select-btn-${paneId}`);
       const selectAllBtn = document.getElementById(`select-all-btn-${paneId}`);
       const clearBtn = document.getElementById(`clear-btn-${paneId}`);
       const sendToBtn = document.getElementById(`send-to-btn-${paneId}`);
-      
+
       if (state.isSelectionMode) {
         selectBtn!.textContent = '✓ Select Mode';
         selectBtn!.classList.add('active');
         selectAllBtn!.style.display = 'inline-block';
         clearBtn!.style.display = 'inline-block';
-        
+
         // Show checkboxes
         document.querySelectorAll(`[id^="checkbox-${paneId}-"]`).forEach(checkbox => {
           (checkbox as HTMLElement).style.display = 'block';
         });
-        
+
         // Add selectable styling
         document.querySelectorAll(`[data-message-id]`).forEach(msg => {
           if (msg.getAttribute('onclick')?.includes(paneId)) {
@@ -507,19 +624,19 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         selectAllBtn!.style.display = 'none';
         clearBtn!.style.display = 'none';
         sendToBtn!.style.display = 'none';
-        
+
         // Hide checkboxes
         document.querySelectorAll(`[id^="checkbox-${paneId}-"]`).forEach(checkbox => {
           (checkbox as HTMLElement).style.display = 'none';
         });
-        
+
         // Remove selectable styling and clear selection
         document.querySelectorAll(`[data-message-id]`).forEach(msg => {
           if (msg.getAttribute('onclick')?.includes(paneId)) {
             msg.classList.remove('selectable', 'selected');
           }
         });
-        
+
         // Clear selection
         state.selectedMessages.clear();
       }
@@ -527,11 +644,11 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
 
     (window as any).toggleMessageSelection = (paneId: string, messageId: string) => {
       if (!selectionState[paneId] || !selectionState[paneId].isSelectionMode) return;
-      
+
       const state = selectionState[paneId];
       const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
       const checkbox = document.querySelector(`#checkbox-${paneId}-${messageId} input`) as HTMLInputElement;
-      
+
       if (state.selectedMessages.has(messageId)) {
         state.selectedMessages.delete(messageId);
         messageElement?.classList.remove('selected');
@@ -541,11 +658,11 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         messageElement?.classList.add('selected');
         if (checkbox) checkbox.checked = true;
       }
-      
+
       // Update send to button
       const sendToBtn = document.getElementById(`send-to-btn-${paneId}`);
       const selectedCount = document.getElementById(`selected-count-${paneId}`);
-      
+
       if (state.selectedMessages.size > 0) {
         sendToBtn!.style.display = 'inline-block';
         selectedCount!.textContent = state.selectedMessages.size.toString();
@@ -556,10 +673,10 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
 
     (window as any).handleMessageCheckbox = (paneId: string, messageId: string, checked: boolean) => {
       if (!selectionState[paneId]) return;
-      
+
       const state = selectionState[paneId];
       const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-      
+
       if (checked) {
         state.selectedMessages.add(messageId);
         messageElement?.classList.add('selected');
@@ -567,11 +684,11 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
         state.selectedMessages.delete(messageId);
         messageElement?.classList.remove('selected');
       }
-      
+
       // Update send to button
       const sendToBtn = document.getElementById(`send-to-btn-${paneId}`);
       const selectedCount = document.getElementById(`selected-count-${paneId}`);
-      
+
       if (state.selectedMessages.size > 0) {
         sendToBtn!.style.display = 'inline-block';
         selectedCount!.textContent = state.selectedMessages.size.toString();
@@ -582,45 +699,45 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
 
     (window as any).selectAllMessages = (paneId: string) => {
       if (!selectionState[paneId]) return;
-      
+
       const state = selectionState[paneId];
       const pane = Object.values(activePanes).find((p: any) => p.id === paneId);
       if (!pane) return;
-      
+
       // Select all messages
       pane.messages.forEach((message: any) => {
         state.selectedMessages.add(message.id);
         const messageElement = document.querySelector(`[data-message-id="${message.id}"]`);
         const checkbox = document.querySelector(`#checkbox-${paneId}-${message.id} input`) as HTMLInputElement;
-        
+
         messageElement?.classList.add('selected');
         if (checkbox) checkbox.checked = true;
       });
-      
+
       // Update send to button
       const sendToBtn = document.getElementById(`send-to-btn-${paneId}`);
       const selectedCount = document.getElementById(`selected-count-${paneId}`);
-      
+
       sendToBtn!.style.display = 'inline-block';
       selectedCount!.textContent = state.selectedMessages.size.toString();
     };
 
     (window as any).clearSelection = (paneId: string) => {
       if (!selectionState[paneId]) return;
-      
+
       const state = selectionState[paneId];
-      
+
       // Clear all selections
       state.selectedMessages.forEach(messageId => {
         const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
         const checkbox = document.querySelector(`#checkbox-${paneId}-${messageId} input`) as HTMLInputElement;
-        
+
         messageElement?.classList.remove('selected');
         if (checkbox) checkbox.checked = false;
       });
-      
+
       state.selectedMessages.clear();
-      
+
       // Hide send to button
       const sendToBtn = document.getElementById(`send-to-btn-${paneId}`);
       sendToBtn!.style.display = 'none';
@@ -629,26 +746,26 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
     (window as any).sendToPane = (paneId: string) => {
       const pane = Object.values(activePanes).find((p: any) => p.id === paneId);
       if (!pane) return;
-      
+
       // Get selection state (may be undefined if no selection has been made)
       const state = selectionState[paneId];
-      
+
       // Get selected messages (or empty if none selected)
-      const selectedMessages = state ? pane.messages.filter((msg: any) => 
+      const selectedMessages = state ? pane.messages.filter((msg: any) =>
         state.selectedMessages.has(msg.id)
       ) : [];
-      
+
       const selectedText = selectedMessages.map((msg: any) => msg.content).join('\n\n');
-      
+
       const selectedContent = {
         messageIds: state ? Array.from(state.selectedMessages) : [],
         text: selectedText
       };
-      
+
       console.log('Send to pane:', paneId, selectedContent);
-      onPaneAction?.({ 
-        type: 'sendTo', 
-        paneId, 
+      onPaneAction?.({
+        type: 'sendTo',
+        paneId,
         data: selectedContent
       });
     };
@@ -656,7 +773,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
     (window as any).sendChatMessage = (paneId: string) => {
       const paneElement = document.querySelector(`[data-pane-id="${paneId}"]`);
       const textarea = paneElement?.querySelector('.chat-input') as HTMLTextAreaElement;
-      
+
       if (textarea && textarea.value.trim()) {
         const message = textarea.value.trim();
         textarea.value = '';
@@ -690,7 +807,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
     console.log('🔄 PaneGrid: useEffect triggered! activePanes:', Object.keys(activePanes).length);
     console.log('🔄 Available pane IDs:', Object.keys(activePanes));
     console.log('🔄 Window IDs:', Array.from(windowsRef.current.keys()));
-    
+
     // Force update all windows
     Object.values(activePanes).forEach(pane => {
       const window = windowsRef.current.get(pane.id);
@@ -711,7 +828,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
     windowsRef.current.forEach((window, paneId) => {
       const isInCompare = selectedPanes?.includes(paneId) || false;
       const windowElement = window.dom;
-      
+
       if (windowElement) {
         if (isInCompare) {
           windowElement.classList.add('compare-mode');
@@ -735,7 +852,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
       const row = Math.floor(index / cols);
       const x = 50 + col * windowWidth;
       const y = 50 + row * windowHeight;
-      
+
       winbox.resize(windowWidth - 20, windowHeight - 20);
       winbox.move(x, y);
     });
@@ -786,12 +903,12 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
 
   return (
     <div className="pane-grid">
-      <div 
-        ref={containerRef} 
+      <div
+        ref={containerRef}
         className="window-manager-container"
-        style={{ 
-          width: '100%', 
-          height: '100%', 
+        style={{
+          width: '100%',
+          height: '100%',
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -820,7 +937,7 @@ export const PaneGrid: React.FC<PaneGridProps> = ({
           </div>
         </div>
       )}
-      
+
 
     </div>
   );

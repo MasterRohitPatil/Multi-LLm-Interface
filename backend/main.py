@@ -6,6 +6,7 @@ FastAPI application with WebSocket support for real-time LLM streaming
 import asyncio
 import json
 import logging
+import uvicorn
 import os
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -119,7 +120,11 @@ async def create_broadcast(request: BroadcastRequest):
         
         # Validate models
         for model_selection in request.models:
-            model_id = f"{model_selection.provider_id}:{model_selection.model_id}"
+            # Check if model_id already contains provider_id prefix
+            if model_selection.model_id.startswith(f"{model_selection.provider_id}:"):
+                model_id = model_selection.model_id
+            else:
+                model_id = f"{model_selection.provider_id}:{model_selection.model_id}"
             print(f"🔍 Validating model: {model_id}")
             
             is_valid = await registry.validate_model(model_id)
@@ -140,7 +145,11 @@ async def create_broadcast(request: BroadcastRequest):
         pane_ids = []
         user_message_ids = {}
         for model_selection in request.models:
-            model_id = f"{model_selection.provider_id}:{model_selection.model_id}"
+            # Check if model_id already contains provider_id prefix
+            if model_selection.model_id.startswith(f"{model_selection.provider_id}:"):
+                model_id = model_selection.model_id
+            else:
+                model_id = f"{model_selection.provider_id}:{model_selection.model_id}"
             print(f"🔍 Getting model info for: {model_id}")
             
             model_info = await registry.get_model_info(model_id)
@@ -174,6 +183,9 @@ async def create_broadcast(request: BroadcastRequest):
             user_message_ids=user_message_ids
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
         logger.error(f"Broadcast error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -184,10 +196,15 @@ async def send_chat_message(pane_id: str, request: dict):
     Send a message to a specific existing pane
     """
     try:
+        # Debug Trace - Trace request entry
+        print(f"\n📨 [POST /chat/{pane_id}] Received config: {request}")
+        
         logger.info(f"Chat request for pane {pane_id}: {request}")
         
         session_id = request.get("session_id")
         message = request.get("message")
+        
+        print(f"📨 [POST /chat] Session: {session_id}, Message: {message[:50] if message else 'None'}...")
         
         if not session_id or not message:
             logger.error(f"Missing required fields: session_id={session_id}, message={bool(message)}")
@@ -242,7 +259,7 @@ async def send_chat_message(pane_id: str, request: dict):
         # Start streaming to existing pane
         asyncio.create_task(
             broadcast_orchestrator._stream_to_pane(
-                broadcast_request, model_selection, pane_id, manager
+                broadcast_request, model_selection, pane_id, connection_manager
             )
         )
         
@@ -660,10 +677,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             manager.disconnect(connection_id, "endpoint_cleanup")
 
 if __name__ == "__main__":
+    port = int(os.getenv("API_PORT", 8080))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=5000,
+        port=port,
         reload=True,
         log_level="info"
     )
@@ -834,3 +852,7 @@ async def reset_circuit_breakers():
             error_type=type(e).__name__
         )
         raise HTTPException(status_code=500, detail="Error resetting circuit breakers")
+
+if __name__ == '__main__':
+    print(' FORCED STARTUP: Listening on 0.0.0.0:8080')
+    uvicorn.run(app, host='0.0.0.0', port=8080)
